@@ -136,14 +136,16 @@ class Environment(object):
         state = self.agent_states[agent]
         location = state['location']
         heading = state['heading']
-        light = 'green' if (self.intersections[location].state and heading[1] != 0) or ((not self.intersections[location].state) and heading[0] != 0) else 'red'
+        light = 'green' if (self.intersections[location].state and heading[1] != 0) or \
+                ((not self.intersections[location].state) and heading[0] != 0) else 'red'
 
         # Populate oncoming, left, right
         oncoming = None
         left = None
         right = None
         for other_agent, other_state in self.agent_states.iteritems():
-            if agent == other_agent or location != other_state['location'] or (heading[0] == other_state['heading'][0] and heading[1] == other_state['heading'][1]):
+            if agent == other_agent or location != other_state['location'] or (heading[0] == other_state['heading'][0] \
+                        and heading[1] == other_state['heading'][1]):
                 continue
             other_heading = other_agent.get_next_waypoint()
             if (heading[0] * other_state['heading'][0] + heading[1] * other_state['heading'][1]) == -1:
@@ -168,9 +170,10 @@ class Environment(object):
         state = self.agent_states[agent]
         location = state['location']
         heading = state['heading']
-        light = 'green' if (self.intersections[location].state and heading[1] != 0) or ((not self.intersections[location].state) and heading[0] != 0) else 'red'
-        inputs = self.sense(agent)
+        light = 'green' if (self.intersections[location].state and heading[1] != 0) or \
+                ((not self.intersections[location].state) and heading[0] != 0) else 'red'
 
+        inputs = self.sense(agent)
         # Move agent if within bounds and obeys traffic rules
         reward = 0  # reward/penalty
         move_okay = True
