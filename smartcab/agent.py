@@ -6,8 +6,6 @@ from simulator import Simulator
 class LearningAgent(Agent):
     """An agent that learns to drive in the smartcab world."""
 
-
-
     def __init__(self, env):
         super(LearningAgent, self).__init__(env)  # sets self.env = env, state = None, next_waypoint = None, and a default color
         self.color = 'red'  # override color
@@ -19,7 +17,7 @@ class LearningAgent(Agent):
         self.gamma = 0.5
         self.Q = {
 
-                  (action, light, oncoming, left, right) : 0        \
+                  (action, light, oncoming, left, right) : 1        \
                   for action   in self.actions                      \
                   for light    in self.lights                       \
                   for oncoming in self.actions                      \
@@ -30,6 +28,7 @@ class LearningAgent(Agent):
     def reset(self, destination=None):
         self.planner.route_to(destination)
         # TODO: Prepare for a new trip; reset any variables here, if required
+        
 
     def update(self, t):
         # Gather inputs
@@ -37,18 +36,28 @@ class LearningAgent(Agent):
         inputs = self.env.sense(self)
         deadline = self.env.get_deadline(self)
 
-        # TODO: Update state
+        # # Update state
         state = (inputs['light'], inputs['oncoming'], inputs['left'], inputs['right'])
+        wp = self.next_waypoint
 
-        # TODO: Select action according to your policy
-        # This is the action that has the highest value in Q at the present state 
-        Q_action = max( {action : self.Q[ (action,) + state ] for action in self.actions }) 
+        # # Select action according to your policy
+
+        current_actions = {action : self.Q[ (action,) + state ] for action in self.actions }
+        Q_action = max( current_actions, key=current_actions.get ) # This is the action that has the highest value in Q at the present state 
+
+        Q_value  = self.Q[ (Q_action,) + state ]   ## This is how Q rates the above Q_action (the actual max)
+        wp_value = self.Q[ (wp,) + state ]         ## This is how Q rates the way_point
+        
+        # Making the best choice give our current state
+        urgency = 1./(deadline + 0.001)
+        two_choices = {Q_action : Q_value * urgency, wp : wp_value * (1 - urgency) }
+        action = max(two_choices, key=two_choices.get)
 
         # Execute action and get reward
         reward = self.env.act(self, action)
 
         # TODO: Learn policy based on state, action, reward
-        self.Q[ (action,) + state ] += reward
+        self.Q[ (action,) + state ] += reward * self.gamma
 
         print "LearningAgent.update(): deadline = {}, inputs = {}, action = {}, reward = {}".format(deadline, inputs, action, reward)  # [debug]
 
