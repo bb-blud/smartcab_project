@@ -50,7 +50,7 @@ class LearningAgent(Agent):
         
         # Making the best choice given our current state
         urgency = 1./(deadline + 0.001)
-        two_choices = {Q_action : Q_value * (1- urgency), wp : wp_value * urgency) }
+        two_choices = {Q_action : Q_value * (1- urgency), wp : wp_value * urgency }
         action = max(two_choices, key=two_choices.get)
 
         # Execute action and get reward
