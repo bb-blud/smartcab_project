@@ -6,11 +6,26 @@ from simulator import Simulator
 class LearningAgent(Agent):
     """An agent that learns to drive in the smartcab world."""
 
+
+
     def __init__(self, env):
         super(LearningAgent, self).__init__(env)  # sets self.env = env, state = None, next_waypoint = None, and a default color
         self.color = 'red'  # override color
         self.planner = RoutePlanner(self.env, self)  # simple route planner to get next_waypoint
+
         # TODO: Initialize any additional variables here
+        self.actions = [None, 'forward', 'left', 'right']
+        self.lights  = ['green','red']
+        self.gamma = 0.5
+        self.Q = {
+
+                  (action, light, oncoming, left, right) : 0        \
+                  for action   in self.actions                      \
+                  for light    in self.lights                       \
+                  for oncoming in self.actions                      \
+                  for left     in self.actions                      \
+                  for right    in self.actions                      \
+        }
 
     def reset(self, destination=None):
         self.planner.route_to(destination)
@@ -23,14 +38,17 @@ class LearningAgent(Agent):
         deadline = self.env.get_deadline(self)
 
         # TODO: Update state
-        
+        state = (inputs['light'], inputs['oncoming'], inputs['left'], inputs['right'])
+
         # TODO: Select action according to your policy
-        action = self.next_waypoint
+        # This is the action that has the highest value in Q at the present state 
+        Q_action = max( {action : self.Q[ (action,) + state ] for action in self.actions }) 
 
         # Execute action and get reward
         reward = self.env.act(self, action)
 
         # TODO: Learn policy based on state, action, reward
+        self.Q[ (action,) + state ] += reward
 
         print "LearningAgent.update(): deadline = {}, inputs = {}, action = {}, reward = {}".format(deadline, inputs, action, reward)  # [debug]
 
