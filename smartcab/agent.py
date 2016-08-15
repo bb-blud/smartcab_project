@@ -17,13 +17,15 @@ class LearningAgent(Agent):
         self.gamma = 0.5
         self.Q = {
 
-                  (action, light, oncoming, left, right) : 1        \
-                  for action   in self.actions                      \
-                  for light    in self.lights                       \
-                  for oncoming in self.actions                      \
-                  for left     in self.actions                      \
-                  for right    in self.actions                      \
+                  (action, light, waypoint, oncoming, left, right) : 0   \
+                  for action   in self.actions                           \
+                  for light    in self.lights                            \
+                  for waypoint in self.actions                           \
+                  for oncoming in self.actions                           \
+                  for left     in self.actions                           \
+                  for right    in self.actions                           \
         }
+#        print "\n\n\n", self.Q[(None, 'green', 'left', None, None, None)], "\n\n"
 
     def reset(self, destination=None):
         self.planner.route_to(destination)
@@ -35,13 +37,12 @@ class LearningAgent(Agent):
         self.next_waypoint = self.planner.next_waypoint()  # from route planner, also displayed by simulator
         inputs = self.env.sense(self)
         deadline = self.env.get_deadline(self)
-
-        # # Update state
-        state = (inputs['light'], inputs['oncoming'], inputs['left'], inputs['right'])
         wp = self.next_waypoint
 
-        # # Select action according to your policy
-
+        # # Update state
+        state = (inputs['light'], wp, inputs['oncoming'], inputs['left'], inputs['right'])
+        
+        # # Select action according to policy
         current_actions = {action : self.Q[ (action,) + state ] for action in self.actions }
         Q_action = max( current_actions, key=current_actions.get ) # This is the action that has the highest value in Q at the present state 
 
