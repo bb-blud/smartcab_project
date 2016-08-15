@@ -48,9 +48,9 @@ class LearningAgent(Agent):
         Q_value  = self.Q[ (Q_action,) + state ]   ## This is how Q rates the above Q_action (the actual max)
         wp_value = self.Q[ (wp,) + state ]         ## This is how Q rates the way_point
         
-        # Making the best choice give our current state
+        # Making the best choice given our current state
         urgency = 1./(deadline + 0.001)
-        two_choices = {Q_action : Q_value * urgency, wp : wp_value * (1 - urgency) }
+        two_choices = {Q_action : Q_value * (1- urgency), wp : wp_value * urgency) }
         action = max(two_choices, key=two_choices.get)
 
         # Execute action and get reward
