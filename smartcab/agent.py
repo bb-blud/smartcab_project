@@ -93,7 +93,7 @@ class LearningAgent(Agent):
         
     def stats(self):
         import matplotlib.pyplot as plt
-        plt.bar(range(len(self.bad_actions)), self.bad_actions.values(), align='center')
+        plt.bar(range(len(self.bad_actions)), self.bad_actions.values())
         plt.xticks(range(len(self.bad_actions)), self.bad_actions.keys())
         plt.show()
 
