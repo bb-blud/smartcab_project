@@ -58,13 +58,16 @@ class LearningAgent(Agent):
 
         # # Learn policy based on state, action, reward
         self.Q[ (action,) + state ] += reward * self.gamma
-        
-        #print "LearningAgent.update(): deadline = {}, inputs = {}, action = {}, reward = {}".format(deadline, inputs, action, reward)  # [debug]
 
         # # Tally bad actions
+        self.tally(reward, t)
+        #print "LearningAgent.update(): deadline = {}, inputs = {}, action = {}, reward = {}".format(deadline, inputs, action, reward)  # [debug]
+
+    def tally(self, reward, t):
         location = self.env.agent_states[self]['location']
         destination = self.env.agent_states[self]['destination']
         dist = self.env.compute_dist(location, destination)
+        deadline = self.env.get_deadline(self)
         
         if t == 0:
             self.trial += 1
@@ -75,8 +78,6 @@ class LearningAgent(Agent):
             
         if self.trial == number_trials - 1 and (deadline < 1  or dist < 1):
             self.stats()
-        # if deadline < 1 or dist < 1:
-        #     print "AAAAAH!!! Trial {} BA = {}".format(self.trial, self.bad_actions[self.trial])
         
     def semi_reckless(self, Q_action, state):
         wp = self.next_waypoint
