@@ -46,8 +46,8 @@ class LearningAgent(Agent):
         state = (inputs['light'], wp, inputs['oncoming'], inputs['left'], inputs['right'])
         
         # # Select action according to policy
-        current_actions = {action : self.Q[ (action,) + state ] for action in self.actions }
-        Q_action = max( current_actions, key=current_actions.get ) # This is the action that has the highest value in Q at the present state 
+        current_actions_vals = {action : self.Q[ (action,) + state ] for action in self.actions }
+        Q_action = max( current_actions_vals, key=current_actions_vals.get ) # This is the action with highest value in Q at the present state 
 
         action = wp   #reckless   
         #action = self.semi_reckless(Q_action, state)
