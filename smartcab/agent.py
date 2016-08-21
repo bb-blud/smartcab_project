@@ -7,10 +7,11 @@ number_trials = 300
 class LearningAgent(Agent):
     """An agent that learns to drive in the smartcab world."""
 
-    def __init__(self, env):
+    def __init__(self, env, policy):
         super(LearningAgent, self).__init__(env)     # sets self.env = env, state = None, next_waypoint = None, and a default color
         self.color = 'red'                           # override color
         self.planner = RoutePlanner(self.env, self)  # simple route planner to get next_waypoint
+        self.policy = policy
 
         # TODO: Initialize any additional variables here
         self.actions = self.env.valid_actions
@@ -43,15 +44,15 @@ class LearningAgent(Agent):
         wp = self.next_waypoint
         
         # # Update state
-        state = (inputs['light'], wp, inputs['oncoming'], inputs['left'], inputs['right'])
+        state = (inputs['light'], self.next_waypoint, inputs['oncoming'], inputs['left'], inputs['right'])
         
         # # Select action according to policy
         current_actions_vals = {action : self.Q[ (action,) + state ] for action in self.actions }
         Q_action = max( current_actions_vals, key=current_actions_vals.get ) # This is the action with highest value in Q at the present state 
-
-        action = wp   #reckless   
-        #action = self.semi_reckless(Q_action, state)
-        #action = Q_action
+        
+        action  = {"reckless"      : wp, 
+                   "semi_reckless" : self.semi_reckless(Q_action, state),
+                   "Q_action"      : Q_action } [self.policy]
 
         # # Execute action and get reward
         reward = self.env.act(self, action)
@@ -98,7 +99,8 @@ class LearningAgent(Agent):
     def stats(self):
         import matplotlib.pyplot as plt
         plt.plot(self.bad_actions.keys(), self.bad_actions.values(), 'ro')
-        plt.axis([0, 100, 0, 1])
+        plt.axis([0, number_trials, 0, 1])
+        plt.title(self.policy)
         plt.show()
         # plt.bar(range(len(self.bad_actions)), self.bad_actions.values())
         # plt.xticks(range(len(self.bad_actions)), self.bad_actions.keys())
@@ -107,19 +109,19 @@ class LearningAgent(Agent):
 
 def run():
     """Run the agent for a finite number of trials."""
+    for policy in ["reckless", "semi_reckless", "Q_action"]:
+        # Set up environment and agent
+        e = Environment()  # create environment (also adds some dummy traffic)
+        a = e.create_agent(LearningAgent,policy)  # create agent
+        e.set_primary_agent(a, enforce_deadline=True)  # specify agent to track
+        # NOTE: You can set enforce_deadline=False while debugging to allow longer trials
 
-    # Set up environment and agent
-    e = Environment()  # create environment (also adds some dummy traffic)
-    a = e.create_agent(LearningAgent)  # create agent
-    e.set_primary_agent(a, enforce_deadline=True)  # specify agent to track
-    # NOTE: You can set enforce_deadline=False while debugging to allow longer trials
+        # Now simulate it
+        sim = Simulator(e, update_delay=0.0, display=False)  # create simulator (uses pygame when display=True, if available)
+        # NOTE: To speed up simulation, reduce update_delay and/or set display=False
 
-    # Now simulate it
-    sim = Simulator(e, update_delay=0.0, display=False)  # create simulator (uses pygame when display=True, if available)
-    # NOTE: To speed up simulation, reduce update_delay and/or set display=False
-
-    sim.run(n_trials=number_trials)  # run for a specified number of trials
-    # NOTE: To quit midway, press Esc or close pygame window, or hit Ctrl+C on the command-line
+        sim.run(n_trials=number_trials)  # run for a specified number of trials
+        # NOTE: To quit midway, press Esc or close pygame window, or hit Ctrl+C on the command-line
 
 
 if __name__ == '__main__':
