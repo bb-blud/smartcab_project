@@ -3,7 +3,7 @@ from environment import Agent, Environment
 from planner import RoutePlanner
 from simulator import Simulator
 
-number_trials = 100
+number_trials = 300
 class LearningAgent(Agent):
     """An agent that learns to drive in the smartcab world."""
 
@@ -66,6 +66,7 @@ class LearningAgent(Agent):
     def tally(self, reward, t):
         location = self.env.agent_states[self]['location']
         destination = self.env.agent_states[self]['destination']
+
         dist = self.env.compute_dist(location, destination)
         deadline = self.env.get_deadline(self)
         
@@ -76,8 +77,11 @@ class LearningAgent(Agent):
         if reward < 0:
             self.bad_actions[self.trial] += 1
             
-        if self.trial == number_trials - 1 and (deadline < 1  or dist < 1):
-            self.stats()
+        if deadline < 1  or dist < 1:
+            self.bad_actions[self.trial] /= 1.0*t
+           
+            if self.trial == number_trials - 1 :
+                self.stats()
         
     def semi_reckless(self, Q_action, state):
         wp = self.next_waypoint
@@ -93,9 +97,12 @@ class LearningAgent(Agent):
         
     def stats(self):
         import matplotlib.pyplot as plt
-        plt.bar(range(len(self.bad_actions)), self.bad_actions.values())
-        plt.xticks(range(len(self.bad_actions)), self.bad_actions.keys())
+        plt.plot(self.bad_actions.keys(), self.bad_actions.values(), 'ro')
+        plt.axis([0, 100, 0, 1])
         plt.show()
+        # plt.bar(range(len(self.bad_actions)), self.bad_actions.values())
+        # plt.xticks(range(len(self.bad_actions)), self.bad_actions.keys())
+        # plt.show()
 
 
 def run():
