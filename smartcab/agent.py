@@ -3,7 +3,7 @@ from environment import Agent, Environment
 from planner import RoutePlanner
 from simulator import Simulator
 
-number_trials = 300
+number_trials = 100
 class LearningAgent(Agent):
     """An agent that learns to drive in the smartcab world."""
 
@@ -38,31 +38,45 @@ class LearningAgent(Agent):
 
     def update(self, t):
         # Gather inputs
-        self.next_waypoint = self.planner.next_waypoint()  # from route planner, also displayed by simulator
+        self.next_waypoint = self.planner.next_waypoint()           ## from route planner, also displayed by simulator
         inputs = self.env.sense(self)
         deadline = self.env.get_deadline(self)
         wp = self.next_waypoint
         
         # # Update state
-        state = (inputs['light'], self.next_waypoint, inputs['oncoming'], inputs['left'], inputs['right'])
+        state = (inputs['light'], wp, inputs['oncoming'], inputs['left'], inputs['right'])
         
         # # Select action according to policy
-        current_actions_vals = {action : self.Q[ (action,) + state ] for action in self.actions }
-        Q_action = max( current_actions_vals, key=current_actions_vals.get ) # This is the action with highest value in Q at the present state 
-        
-        action  = {"reckless"      : wp, 
+        Q_action = self.max_action(state)
+
+        action  = {"reckless"      : wp,
                    "semi_reckless" : self.semi_reckless(Q_action, state),
-                   "Q_action"      : Q_action } [self.policy]
+                   "Q_learning"    : Q_action } [self.policy]      ## Dictionary of different policies for comparison
 
         # # Execute action and get reward
         reward = self.env.act(self, action)
 
         # # Learn policy based on state, action, reward
-        self.Q[ (action,) + state ] += reward * self.gamma
+        alpha = 0.6      # Learning rate
+
+        new_state = (inputs['light'], self.next_waypoint, inputs['oncoming'], inputs['left'], inputs['right'])
+        new_action = self.max_action(new_state)
+
+        V = self.Q[ (action,) + state ]
+        X = reward + self.gamma * self.Q[ (new_action,) + new_state]
+
+        self.Q[ (action,) + state ] =  (1-alpha) * V + alpha *X   ## Updating Q
 
         # # Tally bad actions
         self.tally(reward, t)
+
         #print "LearningAgent.update(): deadline = {}, inputs = {}, action = {}, reward = {}".format(deadline, inputs, action, reward)  # [debug]
+        
+    def max_action(self, state):
+        actions_and_vals = {action : self.Q[ (action,) + state ] for action in self.actions }
+        Q_action = max( actions_and_vals, key=actions_and_vals.get )  
+
+        return Q_action    ## Action with highest value in Q at the present state
 
     def tally(self, reward, t):
         location = self.env.agent_states[self]['location']
@@ -90,7 +104,7 @@ class LearningAgent(Agent):
         Q_value  = self.Q[ (Q_action,) + state ]   ## This is how Q rates the above Q_action (the actual max)
         wp_value = self.Q[ (wp,) + state ]         ## This is how Q rates the way_point
 
-        # Making the best choice given our current state
+        # Making a time weighted choice given current state
         urgency = 1./(deadline + 0.001)
         two_choices = {Q_action : Q_value * (1 - urgency), wp : wp_value * urgency }
 
@@ -109,7 +123,7 @@ class LearningAgent(Agent):
 
 def run():
     """Run the agent for a finite number of trials."""
-    for policy in ["reckless", "semi_reckless", "Q_action"]:
+    for policy in ["reckless", "semi_reckless", "Q_learning"]:
         # Set up environment and agent
         e = Environment()  # create environment (also adds some dummy traffic)
         a = e.create_agent(LearningAgent,policy)  # create agent
