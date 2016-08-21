@@ -13,11 +13,18 @@ class LearningAgent(Agent):
         self.planner = RoutePlanner(self.env, self)  # simple route planner to get next_waypoint
         self.policy = policy
 
-        # TODO: Initialize any additional variables here
+        # #Initialize any additional variables here
+
+        # State descriptors
         self.actions = self.env.valid_actions
-        self.bad_actions = {}
-        self.trial = -1 
         self.lights  = ['green','red']
+
+        # For tallying performance
+        self.bad_actions  = {}
+        self.out_of_times = {}
+        self.trial = -1 
+        
+        # For Q learning implementation
         self.gamma = 0.5
         
         self.Q = {
@@ -85,18 +92,23 @@ class LearningAgent(Agent):
         dist = self.env.compute_dist(location, destination)
         deadline = self.env.get_deadline(self)
         
-        if t == 0:
+        if t == 0:                          ## Start tally for new trial
             self.trial += 1
             self.bad_actions[self.trial] = 0
 
-        if reward < 0:
+        if reward < 0:                     ## Count bad moves
             self.bad_actions[self.trial] += 1
             
-        if deadline < 1  or dist < 1:
+        if deadline < 1 or dist < 1:       ## Divide the number of bad moves by total moves in trial
             self.bad_actions[self.trial] /= 1.0*t
            
-            if self.trial == number_trials - 1 :
-                self.stats()
+            if deadline < 1 and dist >= 1: ## Mark if agent ran out time of before reaching target
+                self.out_of_times[self.trial] = 1
+            else:
+                self.out_of_times[self.trial] = 0 
+
+                if self.trial == number_trials - 1 :
+                    self.stats()           ## Plot bad_actions/actions ratio vs trial number
         
     def semi_reckless(self, Q_action, state):
         wp = self.next_waypoint
@@ -111,11 +123,21 @@ class LearningAgent(Agent):
         return max(two_choices, key=two_choices.get)
         
     def stats(self):
+        import numpy as np
         import matplotlib.pyplot as plt
-        plt.plot(self.bad_actions.keys(), self.bad_actions.values(), 'ro')
+
+        colormap = np.array(['r', 'g'])
+        color_categories = np.array(self.out_of_times.values())
+
+        x = self.bad_actions.keys()
+        y = self.bad_actions.values()
+        
+
+        plt.scatter(x, y, s=50, c=colormap[color_categories])
         plt.axis([0, number_trials, 0, 1])
         plt.title(self.policy)
         plt.show()
+
         # plt.bar(range(len(self.bad_actions)), self.bad_actions.values())
         # plt.xticks(range(len(self.bad_actions)), self.bad_actions.keys())
         # plt.show()
