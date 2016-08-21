@@ -56,7 +56,9 @@ class LearningAgent(Agent):
         # # Select action according to policy
         Q_action = self.max_action(state)
 
-        action  = {"reckless"      : wp,
+        action  = {
+                   "random"        : random.choice(self.actions[1:]),
+                   "reckless"      : wp,
                    "semi_reckless" : self.semi_reckless(Q_action, state),
                    "Q_learning"    : Q_action } [self.policy]      ## Dictionary of different policies for comparison
 
@@ -145,11 +147,11 @@ class LearningAgent(Agent):
 
 def run():
     """Run the agent for a finite number of trials."""
-    for policy in ["reckless", "semi_reckless", "Q_learning"]:
+    for policy in ["random", "reckless", "semi_reckless", "Q_learning"]:
         # Set up environment and agent
         e = Environment()  # create environment (also adds some dummy traffic)
         a = e.create_agent(LearningAgent,policy)  # create agent
-        e.set_primary_agent(a, enforce_deadline=True)  # specify agent to track
+        e.set_primary_agent(a, enforce_deadline=False)  # specify agent to track
         # NOTE: You can set enforce_deadline=False while debugging to allow longer trials
 
         # Now simulate it
