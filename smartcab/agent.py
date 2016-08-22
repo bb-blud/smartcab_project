@@ -23,6 +23,7 @@ class LearningAgent(Agent):
         self.bad_actions  = {}
         self.out_of_times = {}
         self.trial = -1 
+        self.total_time = 0
         
         # For Q learning implementation
         self.gamma = 0.5
@@ -66,7 +67,7 @@ class LearningAgent(Agent):
         reward = self.env.act(self, action)
 
         # # Learn policy based on state, action, reward
-        alpha = 0.6      # Learning rate
+        alpha = 0.6      ## Learning rate
 
         new_state = (inputs['light'], self.next_waypoint, inputs['oncoming'], inputs['left'], inputs['right'])
         new_action = self.max_action(new_state)
@@ -94,23 +95,24 @@ class LearningAgent(Agent):
         dist = self.env.compute_dist(location, destination)
         deadline = self.env.get_deadline(self)
         
-        if t == 0:                          ## Start tally for new trial
+        if t == 0:                           ## Start tally for new trial
             self.trial += 1
             self.bad_actions[self.trial] = 0
 
-        if reward < 0:                     ## Count bad moves
+        if reward < 0:                       ## Count bad moves
             self.bad_actions[self.trial] += 1
             
-        if deadline < 1 or dist < 1:       ## Divide the number of bad moves by total moves in trial
+        if deadline < 1 or dist < 1:         ## Divide the number of bad moves by total moves in trial
             self.bad_actions[self.trial] /= 1.0*t
+            self.total_time += t
            
-            if deadline < 1 and dist >= 1: ## Mark if agent ran out time of before reaching target
+            if deadline < 1 and dist >= 1:   ## Mark if agent ran out time of before reaching target
                 self.out_of_times[self.trial] = 1
             else:
                 self.out_of_times[self.trial] = 0 
 
                 if self.trial == number_trials - 1 :
-                    self.stats()           ## Plot bad_actions/actions ratio vs trial number
+                    self.stats()             ## Plot bad_actions/actions ratio vs trial number
         
     def semi_reckless(self, Q_action, state):
         wp = self.next_waypoint
@@ -128,21 +130,32 @@ class LearningAgent(Agent):
         import numpy as np
         import matplotlib.pyplot as plt
 
-        colormap = np.array(['r', 'g'])
-        color_categories = np.array(self.out_of_times.values())
-
-        x = self.bad_actions.keys()
-        y = self.bad_actions.values()
+        out  = self.out_of_times.values()
+        vals = self.bad_actions.values()
         
+        if sum(out) is not 0:   # That is, if there are trials were agent missed the target
 
-        plt.scatter(x, y, s=50, c=colormap[color_categories])
+            x_miss, y_miss = zip(* [(i, x) for i,x in enumerate(vals) if out[i] ] )
+            x_hit, y_hit   = zip(* [(i, x) for i,x in enumerate(vals) if not out[i] ] )
+
+            plt.scatter(x_hit , y_hit , s=50, c="red"  , label="reached target")
+            plt.scatter(x_miss, y_miss, s=50, c="green", label="missed target")
+
+        else:
+
+            plt.scatter(range(number_trials), vals, s=50, c="red", label="reached target")
+            
+        avg_trial = 1.0 * self.total_time/number_trials
+        misses = sum(out), 100.* sum(out)/number_trials
+
+        suptitle = "Policy: "+ self.policy 
+        title = "\navg trial length = {} \nmissed targets  = {} or {}%".format(avg_trial, misses[0], misses[1])
         plt.axis([0, number_trials, 0, 1])
-        plt.title(self.policy)
+        plt.suptitle(suptitle, fontweight='bold')
+        plt.title(title)
+        plt.legend(loc='right', bbox_to_anchor=(1, 1),prop={'size':10})
+        plt.tight_layout()
         plt.show()
-
-        # plt.bar(range(len(self.bad_actions)), self.bad_actions.values())
-        # plt.xticks(range(len(self.bad_actions)), self.bad_actions.keys())
-        # plt.show()
 
 
 def run():
