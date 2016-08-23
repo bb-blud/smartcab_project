@@ -1,13 +1,16 @@
 import random
+import numpy as np
 from environment import Agent, Environment
 from planner import RoutePlanner
 from simulator import Simulator
 
 number_trials = 100
+tally_rates = {}    # For evaluating different values of learning rate alpha, and discount rate gamma
+
 class LearningAgent(Agent):
     """An agent that learns to drive in the smartcab world."""
 
-    def __init__(self, env, policy):
+    def __init__(self, env, policy, alpha, gamma, no_plot):
         super(LearningAgent, self).__init__(env)     # sets self.env = env, state = None, next_waypoint = None, and a default color
         self.color = 'red'                           # override color
         self.planner = RoutePlanner(self.env, self)  # simple route planner to get next_waypoint
@@ -24,19 +27,21 @@ class LearningAgent(Agent):
         self.out_of_times = {}
         self.trial = -1 
         self.total_time = 0
+        self.no_plot = no_plot   # activate plots or not
         
         # For Q learning implementation
-        self.gamma = 0.5
+        self.gamma = gamma
+        self.alpha = alpha
         
         self.Q = {
 
                   (action, light, waypoint, oncoming, left, right) : 0   \
                   for action   in self.actions                           \
                   for light    in self.lights                            \
-                  for waypoint in self.actions                           \
                   for oncoming in self.actions                           \
                   for left     in self.actions                           \
                   for right    in self.actions                           \
+                  for waypoint in self.actions[1:]                       # waypoint is only None when target is reached
         }
 
     def reset(self, destination=None):
@@ -67,7 +72,7 @@ class LearningAgent(Agent):
         reward = self.env.act(self, action)
 
         # # Learn policy based on state, action, reward
-        alpha = 0.6      ## Learning rate
+        alpha = self.alpha      ## Learning rate
 
         new_state = (inputs['light'], self.next_waypoint, inputs['oncoming'], inputs['left'], inputs['right'])
         new_action = self.max_action(new_state)
@@ -127,52 +132,85 @@ class LearningAgent(Agent):
         return max(two_choices, key=two_choices.get)
         
     def stats(self):
-        import numpy as np
         import matplotlib.pyplot as plt
 
         out  = self.out_of_times.values()
         vals = self.bad_actions.values()
-        
-        if sum(out) is not 0:   # That is, if there are trials were agent missed the target
 
-            x_miss, y_miss = zip(* [(i, x) for i,x in enumerate(vals) if out[i] ] )
-            x_hit, y_hit   = zip(* [(i, x) for i,x in enumerate(vals) if not out[i] ] )
-
-            plt.scatter(x_hit , y_hit , s=50, c="red"  , label="reached target")
-            plt.scatter(x_miss, y_miss, s=50, c="green", label="missed target")
-
-        else:
-
-            plt.scatter(range(number_trials), vals, s=50, c="red", label="reached target")
-            
         avg_trial = 1.0 * self.total_time/number_trials
         misses = sum(out), 100.* sum(out)/number_trials
 
-        suptitle = "Policy: "+ self.policy 
-        title = "\navg trial length = {} \nmissed targets  = {} or {}%".format(avg_trial, misses[0], misses[1])
-        plt.axis([0, number_trials, 0, 1])
-        plt.suptitle(suptitle, fontweight='bold')
-        plt.title(title)
-        plt.legend(loc='right', bbox_to_anchor=(1, 1),prop={'size':10})
-        plt.tight_layout()
-        plt.show()
+        if self.no_plot:
+
+            tally_rates[self.alpha, self.gamma] = []
+            tally_rates[self.alpha, self.gamma].append(avg_trial)
+            
+
+        else:
+
+            if sum(out) is not 0:   # That is, if there are trials were agent missed the target
+
+                x_miss, y_miss = zip(* [(i, x) for i,x in enumerate(vals) if out[i] ] )
+                x_hit, y_hit   = zip(* [(i, x) for i,x in enumerate(vals) if not out[i] ] )
+
+                plt.scatter(x_hit , y_hit , s=50, c="red"  , label="reached target")
+                plt.scatter(x_miss, y_miss, s=50, c="green", label="missed target")
+
+            else:
+
+                plt.scatter(range(number_trials), vals, s=50, c="red", label="reached target")
+
+            suptitle = "Policy: " + self.policy 
+            title = "\navg trial length = {} \nmissed targets  = {} or {}%".format(avg_trial, misses[0], misses[1])
+            plt.axis([0, number_trials, 0, 1])
+            plt.suptitle(suptitle, fontweight='bold')
+            plt.title(title)
+            plt.xlabel("Learning Rate = {}".format(self.alpha))
+            plt.legend(loc='right', bbox_to_anchor=(1, 1),prop={'size':10})
+            plt.tight_layout()
+            plt.show()
 
 
 def run():
     """Run the agent for a finite number of trials."""
-    for policy in ["random", "reckless", "semi_reckless", "Q_learning"]:
-        # Set up environment and agent
-        e = Environment()  # create environment (also adds some dummy traffic)
-        a = e.create_agent(LearningAgent,policy)  # create agent
-        e.set_primary_agent(a, enforce_deadline=False)  # specify agent to track
-        # NOTE: You can set enforce_deadline=False while debugging to allow longer trials
 
-        # Now simulate it
-        sim = Simulator(e, update_delay=0.0, display=False)  # create simulator (uses pygame when display=True, if available)
-        # NOTE: To speed up simulation, reduce update_delay and/or set display=False
+    # for policy in ["random", "reckless", "semi_reckless", "Q_learning"]:
+    #     # Set up environment and agent
+    #     e = Environment()  # create environment (also adds some dummy traffic)
+    #     a = e.create_agent(LearningAgent,policy,alpha, gamma, no_plot=False)  # create agent
+    #     #a = e.create_agent(LearningAgent,policy, 0.5)  # create agent
+    #     e.set_primary_agent(a, enforce_deadline=False)  # specify agent to track
+    #     # NOTE: You can set enforce_deadline=False while debugging to allow longer trials
 
-        sim.run(n_trials=number_trials)  # run for a specified number of trials
-        # NOTE: To quit midway, press Esc or close pygame window, or hit Ctrl+C on the command-line
+    #     # Now simulate it
+    #     sim = Simulator(e, update_delay=0.0, display=False)  # create simulator (uses pygame when display=True, if available)
+    #     # NOTE: To speed up simulation, reduce update_delay and/or set display=False
+
+    #     sim.run(n_trials=number_trials)  # run for a specified number of trials
+    #     # NOTE: To quit midway, press Esc or close pygame window, or hit Ctrl+C on the command-line
+
+    ####################################################
+    # Below, for testing values of learning rate alpha
+    ####################################################
+    for k in range(100):
+        for gamma in np.arange(0.1, 0.9, 0.1):       # 
+            for alpha in np.arange(0.1, 1, 0.1):     # Faux Gridsearch
+
+                    policy = "Q_learning"
+                    # Set up environment and agent
+                    e = Environment()  
+                    a = e.create_agent(LearningAgent,policy,alpha, gamma, no_plot=True)  # create agent
+                    e.set_primary_agent(a, enforce_deadline=False)  
+
+                    # Now simulate it
+                    sim = Simulator(e, update_delay=0.0, display=False)  # create simulator (uses pygame when display=True, if available)
+                    sim.run(n_trials=number_trials)  # run for a specified number of trials
+
+    print max(tally_rates, keys=tally_rates.get)
+
+
+    ###############
+    ###############
 
 
 if __name__ == '__main__':
