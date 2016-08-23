@@ -141,11 +141,12 @@ class LearningAgent(Agent):
         misses = sum(out), 100.* sum(out)/number_trials
 
         if self.no_plot:
-
-            tally_rates[self.alpha, self.gamma] = []
-            tally_rates[self.alpha, self.gamma].append(avg_trial)
             
-
+            if (self.alpha, self.gamma) not in tally_rates.keys():
+                tally_rates[self.alpha, self.gamma] = []
+            else:
+                tally_rates[self.alpha, self.gamma].append(avg_trial)
+            
         else:
 
             if sum(out) is not 0:   # That is, if there are trials were agent missed the target
