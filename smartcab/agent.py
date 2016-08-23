@@ -206,7 +206,8 @@ def run():
                     sim = Simulator(e, update_delay=0.0, display=False)  # create simulator (uses pygame when display=True, if available)
                     sim.run(n_trials=number_trials)  # run for a specified number of trials
 
-    print max(tally_rates, keys=tally_rates.get)
+    avgs = { np.mean(tally_rates[key]) : key for key in tally_rates.keys() }
+    print min(avgs, keys=avgs.get)
 
 
     ###############
