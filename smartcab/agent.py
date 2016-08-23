@@ -192,9 +192,9 @@ def run():
     ####################################################
     # Below, for testing values of learning rate alpha
     ####################################################
-    for k in range(100):
-        for gamma in np.arange(0.1, 0.9, 0.1):       # 
-            for alpha in np.arange(0.1, 1, 0.1):     # Faux Gridsearch
+    for k in range(2):
+        for gamma in [0.1, 0.5, 0.9]:#np.arange(0.1, 0.9, 0.1):       #
+            for alpha in [0.1, 0.5, 0.9]:#np.arange(0.1, 1, 0.1):     # Faux Gridsearch
 
                     policy = "Q_learning"
                     # Set up environment and agent
@@ -206,8 +206,9 @@ def run():
                     sim = Simulator(e, update_delay=0.0, display=False)  # create simulator (uses pygame when display=True, if available)
                     sim.run(n_trials=number_trials)  # run for a specified number of trials
 
-    avgs = { np.mean(tally_rates[key]) : key for key in tally_rates.keys() }
-    print min(avgs, keys=avgs.get)
+    print len(tally_rates)
+    avgs = { key : np.mean(tally_rates[key]) for key in tally_rates.keys() }
+    print min(avgs, key=avgs.get)
 
 
     ###############
