@@ -4,8 +4,10 @@ from environment import Agent, Environment
 from planner import RoutePlanner
 from simulator import Simulator
 
+
+
 number_trials = 100
-tally_rates = {}    # For evaluating different values of learning rate alpha, and discount rate gamma
+tally_rates = {}         # For evaluating different values of learning rate alpha, and discount rate gamma
 
 class LearningAgent(Agent):
     """An agent that learns to drive in the smartcab world."""
@@ -22,7 +24,7 @@ class LearningAgent(Agent):
         self.actions = self.env.valid_actions
         self.lights  = ['green','red']
 
-        # For tallying performance
+        # For tallying performance and making figures for the report
         self.bad_actions  = {}
         self.out_of_times = {}
         self.trial = -1 
@@ -133,7 +135,7 @@ class LearningAgent(Agent):
         
     def stats(self):
 
-        out  = self.out_of_times.values()
+        out  = self.out_of_times.values()          ## 1 for out of time, 0 for reaching target
         vals = self.bad_actions.values()
 
         avg_trial = 1.0 * self.total_time/number_trials
@@ -190,31 +192,60 @@ def run():
     #     sim.run(n_trials=number_trials)  # run for a specified number of trials
     #     # NOTE: To quit midway, press Esc or close pygame window, or hit Ctrl+C on the command-line
 
-    ####################################################
-    # Below, for testing values of learning rate alpha
-    ####################################################
-    for k in range(2):
-        for gamma in [0.1, 0.5, 0.9]:#np.arange(0.1, 0.9, 0.1):       #
-            for alpha in [0.1, 0.5, 0.9]:#np.arange(0.1, 1, 0.1):     # Faux Gridsearch
+    ##########################################################################
+    # Below, for testing values of learning rate alpha and discount rate gamma
+    ##########################################################################
+
+    alphas = [0.1, 0.5, 0.9]#np.linspace(0.1, 1, 8)
+    gammas = [0.1, 0.5, 0.9]#np.linspace(0.1, 0.9, 8)
+
+    for alp in alphas:                #
+        for gam in gammas:            #
+            for k in range(2):        # Faux Gridsearch
 
                     policy = "Q_learning"
                     # Set up environment and agent
                     e = Environment()  
-                    a = e.create_agent(LearningAgent,policy,alpha, gamma, no_plot=True)  # create agent
+                    a = e.create_agent(LearningAgent, policy, alp, gam, no_plot=True)  # create agent
                     e.set_primary_agent(a, enforce_deadline=False)  
 
                     # Now simulate it
                     sim = Simulator(e, update_delay=0.0, display=False)  # create simulator (uses pygame when display=True, if available)
                     sim.run(n_trials=number_trials)  # run for a specified number of trials
 
-    print len(tally_rates)
     avgs = { key : np.mean(tally_rates[key]) for key in tally_rates.keys() }
-    print min(avgs, key=avgs.get)
+    minm = min(avgs, key=avgs.get)
+    print minm
+    ##Contour
+    import matplotlib.pyplot as plt
 
+    Y, X = np.meshgrid(alphas, gammas)
+    Z = np.array([ [ avgs[x,y] for y in gammas] for x in alphas ])
+
+    plt.pcolor(X,Y,Z, cmap=plt.cm.Blues)
+    plt.axis([X.min(), X.max(), Y.min(), Y.max()])
+    plt.colorbar()
+    plt.show()
+
+    # data = np.array([ [ avgs[x,y] for y in gammas] for x in alphas ])
+    # print data
+
+    # fig, ax = plt.subplots()
+    # heatmap = ax.pcolor(data, cmap=plt.cm.Blues)
+
+    # ax.set_xticks(np.arange(data.shape[0])+0.5, minor=False)
+    # ax.set_yticks(np.arange(data.shape[1])+0.5, minor=False)
+
+    # ax.set_xticklabels(alphas, minor=False)
+    # ax.set_yticklabels(gammas, minor=False)
+
+    # plt.show()
+
+    for k in avgs.keys():
+        print k, avgs[k]
 
     ###############
     ###############
-
 
 if __name__ == '__main__':
     run()
