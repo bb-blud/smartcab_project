@@ -183,7 +183,9 @@ def run():
 
     for policy in ["random", "reckless", "semi_reckless", "Q_learning"]:
         # Set up environment and agent
-        alpha, gamma = 0.5, 0.5    # After unsatisfactoraly tinkering with many values (see alternate main method below)
+        alpha, gamma = 1.0, 0.6     # After inkering with many alpha/gamma pairs (see alternate main method below)
+                                    # gamma is average of 4 and 8 (see pdf report)
+
         e = Environment()           # create environment (also adds some dummy traffic)
         a = e.create_agent(LearningAgent,policy,alpha, gamma, no_plot=False)  # create agent
 
@@ -213,8 +215,8 @@ if __name__ == '__main__':
 # cumulative_ts = manager.dict()
 
 # def alpha_run(alp, gam):
-# #    policy = "Q_learning"
-#     policy = "semi_reckless"
+#     policy = "Q_learning"
+#     #policy = "semi_reckless"
 
 #     # Set up environment and agent
 #     e = Environment()
@@ -246,7 +248,7 @@ if __name__ == '__main__':
 #     avg_2_target = { key : round(cumulative_ts[key]/runs, 2)  for key in cumulative_ts.keys() }
 #     minm = min(avg_2_target, key=avg_2_target.get)
 
-#     ##Contour
+#     ## Heat
 
 #     import matplotlib.pyplot as plt
 
