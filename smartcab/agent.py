@@ -215,7 +215,7 @@ def run():
 
     avgs = { key : np.mean(tally_rates[key]) for key in tally_rates.keys() }
     minm = min(avgs, key=avgs.get)
-    print minm
+
     ##Contour
     import matplotlib.pyplot as plt
 
@@ -224,25 +224,12 @@ def run():
 
     plt.pcolor(X,Y,Z, cmap=plt.cm.Blues)
     plt.axis([X.min(), X.max(), Y.min(), Y.max()])
+    plt.suptitle("Alpha-Gamma Heat Map", fontweight="bold")
+    plt.title("Minimum at {}".format(minm))
+    plt.xlabel("Alpha")
+    plt.ylabel("Gamma")
     plt.colorbar()
     plt.show()
-
-    # data = np.array([ [ avgs[x,y] for y in gammas] for x in alphas ])
-    # print data
-
-    # fig, ax = plt.subplots()
-    # heatmap = ax.pcolor(data, cmap=plt.cm.Blues)
-
-    # ax.set_xticks(np.arange(data.shape[0])+0.5, minor=False)
-    # ax.set_yticks(np.arange(data.shape[1])+0.5, minor=False)
-
-    # ax.set_xticklabels(alphas, minor=False)
-    # ax.set_yticklabels(gammas, minor=False)
-
-    # plt.show()
-
-    for k in avgs.keys():
-        print k, avgs[k]
 
     ###############
     ###############
