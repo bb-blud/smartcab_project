@@ -183,7 +183,7 @@ def run():
 
     for policy in ["random", "reckless", "semi_reckless", "Q_learning"]:
         # Set up environment and agent
-        aplpha, gamma = 0.5, 0.5    # After unsatisfactoraly tinkering with many values (see alternate main method below)
+        alpha, gamma = 0.5, 0.5    # After unsatisfactoraly tinkering with many values (see alternate main method below)
         e = Environment()           # create environment (also adds some dummy traffic)
         a = e.create_agent(LearningAgent,policy,alpha, gamma, no_plot=False)  # create agent
 
