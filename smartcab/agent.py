@@ -7,7 +7,6 @@ from simulator import Simulator
 
 
 number_trials = 100
-tally_rates = {}         # For evaluating different values of learning rate alpha, and discount rate gamma
 
 class LearningAgent(Agent):
     """An agent that learns to drive in the smartcab world."""
@@ -142,10 +141,14 @@ class LearningAgent(Agent):
         misses = sum(out), 100.* sum(out)/number_trials
 
         if self.no_plot:
-            if (self.alpha, self.gamma) not in tally_rates.keys():
-                tally_rates[self.alpha, self.gamma] = []
-            else:
-                tally_rates[self.alpha, self.gamma].append(avg_trial)
+            
+            global cumulative_ts
+            cumulative_ts[self.alpha, self.gamma] += avg_trial
+
+            # if (self.alpha, self.gamma) not in cumulative_ts.keys():
+            #     cumulative_ts[self.alpha, self.gamma] = []
+            # else:
+            #     cumulative_ts[self.alpha, self.gamma].append(avg_trial)
             
         else:
 
@@ -174,65 +177,86 @@ class LearningAgent(Agent):
             plt.show()
 
 
-def run():
-    """Run the agent for a finite number of trials."""
+# def run():
+#     """Run the agent for a finite number of trials."""
 
-    # for policy in ["random", "reckless", "semi_reckless", "Q_learning"]:
-    #     # Set up environment and agent
-    #     e = Environment()  # create environment (also adds some dummy traffic)
-    #     a = e.create_agent(LearningAgent,policy,alpha, gamma, no_plot=False)  # create agent
-    #     #a = e.create_agent(LearningAgent,policy, 0.5)  # create agent
-    #     e.set_primary_agent(a, enforce_deadline=False)  # specify agent to track
-    #     # NOTE: You can set enforce_deadline=False while debugging to allow longer trials
+#     for policy in ["random", "reckless", "semi_reckless", "Q_learning"]:
+#         # Set up environment and agent
+#         e = Environment()  # create environment (also adds some dummy traffic)
+#         a = e.create_agent(LearningAgent,policy,alpha, gamma, no_plot=False)  # create agent
+#         #a = e.create_agent(LearningAgent,policy, 0.5)  # create agent
+#         e.set_primary_agent(a, enforce_deadline=False)  # specify agent to track
+#         # NOTE: You can set enforce_deadline=False while debugging to allow longer trials
 
-    #     # Now simulate it
-    #     sim = Simulator(e, update_delay=0.0, display=False)  # create simulator (uses pygame when display=True, if available)
-    #     # NOTE: To speed up simulation, reduce update_delay and/or set display=False
+#         # Now simulate it
+#         sim = Simulator(e, update_delay=0.0, display=False)  # create simulator (uses pygame when display=True, if available)
+#         # NOTE: To speed up simulation, reduce update_delay and/or set display=False
 
-    #     sim.run(n_trials=number_trials)  # run for a specified number of trials
-    #     # NOTE: To quit midway, press Esc or close pygame window, or hit Ctrl+C on the command-line
+#         sim.run(n_trials=number_trials)  # run for a specified number of trials
+#         # NOTE: To quit midway, press Esc or close pygame window, or hit Ctrl+C on the command-line
 
-    ##########################################################################
+# if __name__ == '__main__':
+#     run()
+
+####################################################################################
     # Below, for testing values of learning rate alpha and discount rate gamma
     ##########################################################################
 
-    alphas = [0.1, 0.5, 0.9]#np.linspace(0.1, 1, 8)
-    gammas = [0.1, 0.5, 0.9]#np.linspace(0.1, 0.9, 8)
+from multiprocessing import Process, Manager
+manager = Manager()
+alphas = np.linspace(0.1, 1, 12)#[0.1, 0.5, 0.9]
+gammas = np.linspace(0.1, 0.9, 12)#[0.1, 0.5, 0.9]
 
-    for alp in alphas:                #
-        for gam in gammas:            #
-            for k in range(2):        # Faux Gridsearch
+# Sums of avg times over n runs of 100 trials each
+cumulative_ts = manager.dict()
 
-                    policy = "Q_learning"
-                    # Set up environment and agent
-                    e = Environment()  
-                    a = e.create_agent(LearningAgent, policy, alp, gam, no_plot=True)  # create agent
-                    e.set_primary_agent(a, enforce_deadline=False)  
+def alpha_run(alp, gam):
+    policy = "Q_learning"
 
-                    # Now simulate it
-                    sim = Simulator(e, update_delay=0.0, display=False)  # create simulator (uses pygame when display=True, if available)
-                    sim.run(n_trials=number_trials)  # run for a specified number of trials
+    # Set up environment and agent
+    e = Environment()
+    a = e.create_agent(LearningAgent, policy, alp, gam, no_plot=True)  # create agent
+    e.set_primary_agent(a, enforce_deadline=False)
 
-    avgs = { key : np.mean(tally_rates[key]) for key in tally_rates.keys() }
-    minm = min(avgs, key=avgs.get)
+    # Now simulate it
+    sim = Simulator(e, update_delay=0.0, display=False)  # create simulator (uses pygame when display=True, if available)
+    sim.run(n_trials=number_trials)  # run for a specified number of trials
+    return
 
-    ##Contour
-    import matplotlib.pyplot as plt
-
-    Y, X = np.meshgrid(alphas, gammas)
-    Z = np.array([ [ avgs[x,y] for y in gammas] for x in alphas ])
-
-    plt.pcolor(X,Y,Z, cmap=plt.cm.Blues)
-    plt.axis([X.min(), X.max(), Y.min(), Y.max()])
-    plt.suptitle("Alpha-Gamma Heat Map", fontweight="bold")
-    plt.title("Minimum at {}".format(minm))
-    plt.xlabel("Alpha")
-    plt.ylabel("Gamma")
-    plt.colorbar()
-    plt.show()
-
-    ###############
-    ###############
 
 if __name__ == '__main__':
-    run()
+
+    runs = 15
+    jobs = []
+    
+    for alp in alphas:                  #
+        for gam in gammas:              #
+            for k in range(runs):       # Faux Gridsearch
+                cumulative_ts[alp,gam] = 0
+                p = Process(target=alpha_run, args=(alp,gam))
+                jobs.append(p)
+                p.start()
+    for p in jobs:
+        p.join()
+
+        
+    avg_2_target = { key : round(cumulative_ts[key]/runs, 2)  for key in cumulative_ts.keys() }
+    minm = min(avg_2_target, key=avg_2_target.get)
+
+    ##Contour
+
+#    import matplotlib.pyplot as plt
+
+    X, Y = np.meshgrid(alphas, gammas)
+    Z = np.array([ [avg_2_target[x,y] for x in alphas] for y in gammas ])
+    print Z
+    print minm
+    # plt.pcolor(X,Y,Z, cmap=plt.cm.Blues)
+    # plt.axis([X.min(), X.max(), Y.min(), Y.max()])
+    # plt.suptitle("Alpha-Gamma Heat Map", fontweight="bold")
+    # plt.title("Minimum at {}".format(minm))
+    # plt.xlabel("Alpha")
+    # plt.ylabel("Gamma")
+    # plt.colorbar()
+    # plt.show()
+
