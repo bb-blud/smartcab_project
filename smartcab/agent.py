@@ -106,6 +106,9 @@ class LearningAgent(Agent):
 
         return max(two_choices, key=two_choices.get)
 
+    #####################################################################################################
+    #                       End Q-Learning
+    #####################################################################################################
 
     def tally(self, reward, t):
         location = self.env.agent_states[self]['location']
@@ -140,6 +143,8 @@ class LearningAgent(Agent):
 
         avg_trial = 1.0 * self.total_time/number_trials
         misses = sum(out), 100.* sum(out)/number_trials
+
+        #print self.policy, avg_trial
 
         if self.no_plot:
             
@@ -180,24 +185,25 @@ class LearningAgent(Agent):
 
 def run():
     """Run the agent for a finite number of trials."""
+    runs = 1 #30
+    for k in range(runs):
+        for policy in ["random", "reckless", "semi_reckless", "Q_learning"]:#["semi_reckless", "Q_learning"]:
+            # Set up environment and agent
+            alpha, gamma = 1.0, 0.6     # After tinkering with many alpha/gamma pairs (see alternate main method below)
+                                        # gamma is average of 4 and 8 (see pdf report)
 
-    for policy in ["random", "reckless", "semi_reckless", "Q_learning"]:
-        # Set up environment and agent
-        alpha, gamma = 1.0, 0.6     # After inkering with many alpha/gamma pairs (see alternate main method below)
-                                    # gamma is average of 4 and 8 (see pdf report)
+            e = Environment()           # create environment (also adds some dummy traffic)
+            a = e.create_agent(LearningAgent,policy,alpha, gamma, no_plot=False)  # create agent
 
-        e = Environment()           # create environment (also adds some dummy traffic)
-        a = e.create_agent(LearningAgent,policy,alpha, gamma, no_plot=False)  # create agent
+            e.set_primary_agent(a, enforce_deadline=False)  # specify agent to track
+            # NOTE: You can set enforce_deadline=False while debugging to allow longer trials
 
-        e.set_primary_agent(a, enforce_deadline=False)  # specify agent to track
-        # NOTE: You can set enforce_deadline=False while debugging to allow longer trials
+            # Now simulate it
+            sim = Simulator(e, update_delay=0.0, display=False)  # create simulator (uses pygame when display=True, if available)
+            # NOTE: To speed up simulation, reduce update_delay and/or set display=False
 
-        # Now simulate it
-        sim = Simulator(e, update_delay=0.0, display=False)  # create simulator (uses pygame when display=True, if available)
-        # NOTE: To speed up simulation, reduce update_delay and/or set display=False
-
-        sim.run(n_trials=number_trials)  # run for a specified number of trials
-        # NOTE: To quit midway, press Esc or close pygame window, or hit Ctrl+C on the command-line
+            sim.run(n_trials=number_trials)  # run for a specified number of trials
+            # NOTE: To quit midway, press Esc or close pygame window, or hit Ctrl+C on the command-line
 
 if __name__ == '__main__':
     run()
