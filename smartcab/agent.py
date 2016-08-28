@@ -36,7 +36,7 @@ class LearningAgent(Agent):
         
         self.Q = {
 
-                  (action, light, waypoint, oncoming, left, right) : 0   \
+                  (action, light, oncoming, left, right, waypoint) : 0   \
                   for action   in self.actions                           \
                   for light    in self.lights                            \
                   for oncoming in self.actions                           \
@@ -58,7 +58,7 @@ class LearningAgent(Agent):
         wp = self.next_waypoint
         
         # # Update state
-        state = (inputs['light'], wp, inputs['oncoming'], inputs['left'], inputs['right'])
+        state = (inputs['light'], inputs['oncoming'], inputs['left'], inputs['right'], wp)
         
         # # Select action according to policy
         Q_action = self.max_action(state)
@@ -75,7 +75,7 @@ class LearningAgent(Agent):
         # # Learn policy based on state, action, reward
         alpha = self.alpha      ## Learning rate
 
-        new_state = (inputs['light'], self.next_waypoint, inputs['oncoming'], inputs['left'], inputs['right'])
+        new_state = (inputs['light'], inputs['oncoming'], inputs['left'], inputs['right'], self.next_waypoint)
         new_action = self.max_action(new_state)
 
         V = self.Q[ (action,) + state ]
@@ -133,8 +133,8 @@ class LearningAgent(Agent):
             else:
                 self.out_of_times[self.trial] = 0 
 
-                if self.trial == number_trials - 1 :
-                    self.stats()             ## Plot bad_actions/actions ratio vs trial number
+            if self.trial == number_trials - 1 :
+                self.stats()                 ## Plot bad_actions/actions ratio vs trial number
         
     def stats(self):
 
@@ -187,7 +187,7 @@ def run():
     """Run the agent for a finite number of trials."""
     runs = 1 #30
     for k in range(runs):
-        for policy in ["random", "reckless", "semi_reckless", "Q_learning"]:#["semi_reckless", "Q_learning"]:
+        for policy in ["Q_learning","semi_reckless"]:#["random", "reckless", "semi_reckless", "Q_learning"]:
             # Set up environment and agent
             alpha, gamma = 1.0, 0.6     # After tinkering with many alpha/gamma pairs (see alternate main method below)
                                         # gamma is average of 4 and 8 (see pdf report)
@@ -195,7 +195,7 @@ def run():
             e = Environment()           # create environment (also adds some dummy traffic)
             a = e.create_agent(LearningAgent,policy,alpha, gamma, no_plot=False)  # create agent
 
-            e.set_primary_agent(a, enforce_deadline=False)  # specify agent to track
+            e.set_primary_agent(a, enforce_deadline=True)  # specify agent to track
             # NOTE: You can set enforce_deadline=False while debugging to allow longer trials
 
             # Now simulate it
