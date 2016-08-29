@@ -119,13 +119,9 @@ class LearningAgent(Agent):
         dist = self.env.compute_dist(location, destination)
         deadline = self.env.get_deadline(self)
 
-        # if t == 0:                              ## Start tally for new trial
-        #     self.trial += 1
-        #     self.bad_actions[self.trial] = 0
-
         if reward < 0:                           ## Count bad moves
             self.bad_actions[self.trial] += 1
-            print self.trial, self.bad_actions[self.trial]
+
         if deadline < 1 or dist < 1:             ## Divide the number of bad moves by total moves in trial
             self.bad_actions[self.trial] /= 1.0*t
             self.total_time += t
@@ -150,11 +146,6 @@ class LearningAgent(Agent):
             
             global cumulative_ts
             cumulative_ts[self.alpha, self.gamma] += avg_trial
-
-            # if (self.alpha, self.gamma) not in cumulative_ts.keys():
-            #     cumulative_ts[self.alpha, self.gamma] = []
-            # else:
-            #     cumulative_ts[self.alpha, self.gamma].append(avg_trial)
             
         else:
 
@@ -187,7 +178,7 @@ def run():
     """Run the agent for a finite number of trials."""
     runs = 1 #30
     for k in range(runs):
-        for policy in ["random","Q_learning"]:#,"semi_reckless"]:#["random", "reckless", "Q_learning", "semi_reckless"]:
+        for policy in ["random", "reckless", "Q_learning", "semi_reckless"]:#["random","Q_learning"]:#,"semi_reckless"]:
             # Set up environment and agent
             alpha, gamma = 1.0, 0.6     # After tinkering with many alpha/gamma pairs (see alternate main method below)
                                         # gamma is average of 4 and 8 (see pdf report)
