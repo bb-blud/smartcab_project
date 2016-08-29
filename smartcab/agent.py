@@ -151,18 +151,20 @@ class LearningAgent(Agent):
 
             import matplotlib.pyplot as plt
 
-            if bad_vals and sum(out) is not 0:   # That is, if there are trials were agent missed the target
-
+            if sum(out) is not 0:
+                # That is, if there are trials were agent missed the target
                 x_miss, y_miss = zip(* [(i, x) for i,x in enumerate(bad_vals) if out[i] ] )
-                x_hit, y_hit   = zip(* [(i, x) for i,x in enumerate(bad_vals) if not out[i] ] )
-
-                plt.scatter(x_hit , y_hit , s=50, c="red"  , label="reached target")
                 plt.scatter(x_miss, y_miss, s=50, c="green", label="missed target")
 
+                if sum(out) != len(out):
+                    # If not ALL the trials were misses
+                    x_hit, y_hit   = zip(* [(i, x) for i,x in enumerate(bad_vals) if not out[i] ] )
+                    plt.scatter(x_hit , y_hit , s=50, c="red"  , label="reached target")
             else:
 
                 plt.scatter(range(number_trials), bad_vals, s=50, c="red", label="reached target")
 
+            ## Generate plot
             suptitle = "Policy: " + self.policy 
             title = "\navg trial length = {} \nmissed targets  = {} or {}%".format(avg_trial, misses[0], misses[1])
             plt.axis([0, number_trials, 0, 1])
