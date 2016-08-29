@@ -79,12 +79,10 @@ class LearningAgent(Agent):
         if not self.prev_action_state:              ## First update previous state is also current state
             self.prev_action_state = (action,) + state
 
-        prev_act, prev_state = self.prev_action_state[0], self.prev_action_state[1:] ## for less cluttered lines below
-
         ## Q Update ##
         alpha = self.alpha                          ## Learning rate
 
-        V = self.Q[ (prev_act,) + prev_state ]
+        V = self.Q[ self.previous_action_state ]
         X = reward + self.gamma * self.Q[ (action,) + state]
 
         self.Q[ (action,) + state ] =  (1-alpha) * V + alpha * X
