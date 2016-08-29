@@ -217,7 +217,7 @@ if __name__ == '__main__':
 # from multiprocessing import Process, Manager
 # manager = Manager()
 # alphas = np.linspace(0.1, 1, 12)#[0.1, 0.5, 0.9]
-# gammas = np.linspace(0.1, 0.9, 12)#[0.1, 0.5, 0.9]
+# gammas = np.linspace(0.1, 0.99, 12)#[0.1, 0.5, 0.9]
 
 # # Sums of avg times over n runs of 100 trials each
 # cumulative_ts = manager.dict()
@@ -239,7 +239,7 @@ if __name__ == '__main__':
 
 # if __name__ == '__main__':
 
-#     runs = 15
+#     runs = 100
 #     jobs = []
     
 #     for alp in alphas:                  #
@@ -252,7 +252,6 @@ if __name__ == '__main__':
 #     for p in jobs:
 #         p.join()
 
-        
 #     avg_2_target = { key : round(cumulative_ts[key]/runs, 2)  for key in cumulative_ts.keys() }
 #     minm = min(avg_2_target, key=avg_2_target.get)
 
@@ -262,6 +261,7 @@ if __name__ == '__main__':
 
 #     X, Y = np.meshgrid(alphas, gammas)
 #     Z = np.array([ [avg_2_target[x,y] for x in alphas] for y in gammas ])
+
 #     print Z
 #     print minm
 #     plt.pcolor(X,Y,Z, cmap=plt.cm.Blues)
