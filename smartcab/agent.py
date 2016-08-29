@@ -51,6 +51,7 @@ class LearningAgent(Agent):
 
         # Reset or increment tallying variables
         self.prev_action_state = None
+        self.prev_reward = 0
         self.trial += 1                                            # update the trial count
 
     def update(self, t):
@@ -78,17 +79,19 @@ class LearningAgent(Agent):
         # # Learn policy based on state, action, reward
         if not self.prev_action_state:              ## First update previous state is also current state
             self.prev_action_state = (action,) + state
+            self.prev_reward = reward
 
         ## Q Update ##
         alpha = self.alpha                          ## Learning rate
 
-        V = self.Q[ self.previous_action_state ]
-        X = reward + self.gamma * self.Q[ (action,) + state]
+        V = self.Q[ self.prev_action_state ]
+        X = self.prev_reward + self.gamma * self.Q[ (action,) + state]
 
-        self.Q[ (action,) + state ] =  (1-alpha) * V + alpha * X
+        self.Q[ self.prev_action_state ] =  (1-alpha) * V + alpha * X
         ##
 
         self.prev_action_state = (action,) + state  ## current state will be previous state on next update
+        self.prev_reward = reward
 
         # # Tally bad actions
         self.tally(reward, t)
