@@ -50,6 +50,7 @@ class LearningAgent(Agent):
 
 
         # Reset or increment tallying variables
+        self.prev_action_state = None
         self.trial += 1                                            # update the trial count
 
     def update(self, t):
@@ -75,20 +76,27 @@ class LearningAgent(Agent):
         reward = self.env.act(self, action)
 
         # # Learn policy based on state, action, reward
-        alpha = self.alpha      ## Learning rate
+        if not self.prev_action_state:              ## First update previous state is also current state
+            self.prev_action_state = (action,) + state
 
-        new_state = (inputs['light'], inputs['oncoming'], inputs['left'], inputs['right'], self.next_waypoint)
-        new_action = self.max_action(new_state)
+        prev_act, prev_state = self.prev_action_state[0], self.prev_action_state[1:] ## for less cluttered lines below
 
-        V = self.Q[ (action,) + state ]
-        X = reward + self.gamma * self.Q[ (new_action,) + new_state]
+        ## Q Update ##
+        alpha = self.alpha                          ## Learning rate
 
-        self.Q[ (action,) + state ] =  (1-alpha) * V + alpha * X   ## Updating Q
+        V = self.Q[ (prev_act,) + prev_state ]
+        X = reward + self.gamma * self.Q[ (action,) + state]
+
+        self.Q[ (action,) + state ] =  (1-alpha) * V + alpha * X
+        ##
+
+        self.prev_action_state = (action,) + state  ## current state will be previous state on next update
 
         # # Tally bad actions
         self.tally(reward, t)
 
-        #print "LearningAgent.update(): deadline = {}, inputs = {}, action = {}, reward = {}".format(deadline, inputs, action, reward)  # [debug]
+        # print "LearningAgent.update(): deadline = {}, inputs = {}".format(deadline, inputs)
+        # print "wp = {}, action = {}, reward = {}, Q = {}".format(wp, action, reward,V)  # [debug]
         
     def max_action(self, state):
         actions_and_vals = {action : self.Q[ (action,) + state ] for action in self.actions }
@@ -180,7 +188,7 @@ def run():
     """Run the agent for a finite number of trials."""
     runs = 1 #30
     for k in range(runs):
-        for policy in ["random", "reckless", "Q_learning", "semi_reckless"]:#["random","Q_learning"]:#,"semi_reckless"]:
+        for policy in ["random", "Q_learning"]:#,"semi_reckless"]:#["random", "reckless", "Q_learning", "semi_reckless"]:#["random",
             # Set up environment and agent
             alpha, gamma = 1.0, 0.6     # After tinkering with many alpha/gamma pairs (see alternate main method below)
                                         # gamma is average of 4 and 8 (see pdf report)
