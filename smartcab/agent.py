@@ -4,9 +4,7 @@ from environment import Agent, Environment
 from planner import RoutePlanner
 from simulator import Simulator
 
-
-
-number_trials = 100
+number_trials = 5
 
 class LearningAgent(Agent):
     """An agent that learns to drive in the smartcab world."""
@@ -22,18 +20,19 @@ class LearningAgent(Agent):
         # State descriptors
         self.actions = self.env.valid_actions
         self.lights  = ['green','red']
-
-        # For tallying performance and making figures for the report
-        self.bad_actions  = {}
-        self.out_of_times = {}
-        self.trial = -1 
+        
+        # For a global tally of events over the n trials
         self.total_time = 0
+        self.trial = -1
         self.no_plot = no_plot   # activate plots or not
+        self.bad_actions  = [0 for trial in range(number_trials)]  # bad actions performed in a given trial
+        self.out_of_times = [0 for trial in range(number_trials)]  # trials that agent run out of time
+
         
         # For Q learning implementation
         self.gamma = gamma
         self.alpha = alpha
-        
+
         self.Q = {
 
                   (action, light, oncoming, left, right, waypoint) : 0   \
@@ -48,7 +47,10 @@ class LearningAgent(Agent):
     def reset(self, destination=None):
         self.planner.route_to(destination)
         # TODO: Prepare for a new trip; reset any variables here, if required
-        
+
+
+        # Reset or increment tallying variables
+        self.trial += 1                                            # update the trial count
 
     def update(self, t):
         # Gather inputs
@@ -81,7 +83,7 @@ class LearningAgent(Agent):
         V = self.Q[ (action,) + state ]
         X = reward + self.gamma * self.Q[ (new_action,) + new_state]
 
-        self.Q[ (action,) + state ] =  (1-alpha) * V + alpha *X   ## Updating Q
+        self.Q[ (action,) + state ] =  (1-alpha) * V + alpha * X   ## Updating Q
 
         # # Tally bad actions
         self.tally(reward, t)
@@ -90,7 +92,7 @@ class LearningAgent(Agent):
         
     def max_action(self, state):
         actions_and_vals = {action : self.Q[ (action,) + state ] for action in self.actions }
-        Q_action = max( actions_and_vals, key=actions_and_vals.get )  
+        Q_action = max( actions_and_vals, key=actions_and_vals.get )
 
         return Q_action    ## Action with highest value in Q at the present state
 
@@ -116,35 +118,33 @@ class LearningAgent(Agent):
 
         dist = self.env.compute_dist(location, destination)
         deadline = self.env.get_deadline(self)
-        
-        if t == 0:                           ## Start tally for new trial
-            self.trial += 1
-            self.bad_actions[self.trial] = 0
 
-        if reward < 0:                       ## Count bad moves
+        # if t == 0:                              ## Start tally for new trial
+        #     self.trial += 1
+        #     self.bad_actions[self.trial] = 0
+
+        if reward < 0:                           ## Count bad moves
             self.bad_actions[self.trial] += 1
-            
-        if deadline < 1 or dist < 1:         ## Divide the number of bad moves by total moves in trial
+            print self.trial, self.bad_actions[self.trial]
+        if deadline < 1 or dist < 1:             ## Divide the number of bad moves by total moves in trial
             self.bad_actions[self.trial] /= 1.0*t
             self.total_time += t
            
-            if deadline < 1 and dist >= 1:   ## Mark if agent ran out time of before reaching target
+            if deadline < 1 and dist >= 1:       ## Mark if agent ran out time of before reaching target
                 self.out_of_times[self.trial] = 1
             else:
-                self.out_of_times[self.trial] = 0 
+                self.out_of_times[self.trial] = 0
 
-            if self.trial == number_trials - 1 :
-                self.stats()                 ## Plot bad_actions/actions ratio vs trial number
+            if self.trial == number_trials - 1 : ## At the end of n trials;
+                self.stats()                     ## plot bad_actions/actions ratio vs trial number
         
     def stats(self):
 
-        out  = self.out_of_times.values()          ## 1 for out of time, 0 for reaching target
-        vals = self.bad_actions.values()
+        out  = self.out_of_times                 ## 1 for out of time, 0 for reaching target
+        bad_vals = self.bad_actions
 
         avg_trial = 1.0 * self.total_time/number_trials
         misses = sum(out), 100.* sum(out)/number_trials
-
-        #print self.policy, avg_trial
 
         if self.no_plot:
             
@@ -160,17 +160,17 @@ class LearningAgent(Agent):
 
             import matplotlib.pyplot as plt
 
-            if sum(out) is not 0:   # That is, if there are trials were agent missed the target
+            if bad_vals and sum(out) is not 0:   # That is, if there are trials were agent missed the target
 
-                x_miss, y_miss = zip(* [(i, x) for i,x in enumerate(vals) if out[i] ] )
-                x_hit, y_hit   = zip(* [(i, x) for i,x in enumerate(vals) if not out[i] ] )
+                x_miss, y_miss = zip(* [(i, x) for i,x in enumerate(bad_vals) if out[i] ] )
+                x_hit, y_hit   = zip(* [(i, x) for i,x in enumerate(bad_vals) if not out[i] ] )
 
                 plt.scatter(x_hit , y_hit , s=50, c="red"  , label="reached target")
                 plt.scatter(x_miss, y_miss, s=50, c="green", label="missed target")
 
             else:
 
-                plt.scatter(range(number_trials), vals, s=50, c="red", label="reached target")
+                plt.scatter(range(number_trials), bad_vals, s=50, c="red", label="reached target")
 
             suptitle = "Policy: " + self.policy 
             title = "\navg trial length = {} \nmissed targets  = {} or {}%".format(avg_trial, misses[0], misses[1])
@@ -187,7 +187,7 @@ def run():
     """Run the agent for a finite number of trials."""
     runs = 1 #30
     for k in range(runs):
-        for policy in ["Q_learning","semi_reckless"]:#["random", "reckless", "semi_reckless", "Q_learning"]:
+        for policy in ["random","Q_learning"]:#,"semi_reckless"]:#["random", "reckless", "Q_learning", "semi_reckless"]:
             # Set up environment and agent
             alpha, gamma = 1.0, 0.6     # After tinkering with many alpha/gamma pairs (see alternate main method below)
                                         # gamma is average of 4 and 8 (see pdf report)
