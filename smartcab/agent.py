@@ -78,7 +78,6 @@ class LearningAgent(Agent):
                    "Q_learning"    : Q_action } [self.policy]    ## Dictionary of different policies for comparison
 
 
-
         # # Execute action and get reward
         reward = self.env.act(self, action)
 
@@ -195,10 +194,10 @@ def run():
     """Run the agent for a finite number of trials."""
     runs = 1 #30
     for k in range(runs):
-        for policy in ["random", "Q_learning"]:#,"semi_reckless"]:#["random", "reckless", "Q_learning", "semi_reckless"]:#["random",
+        for policy in ["random", "reckless", "Q_learning", "semi_reckless"]:
             # Set up environment and agent
-            alpha, gamma = 1.0, 0.6     # After tinkering with many alpha/gamma pairs (see alternate main method below)
-                                        # gamma is average of 4 and 8 (see pdf report)
+            alpha, gamma = 1.0, 0.2     # After tinkering with many alpha/gamma pairs (see alternate main method below)
+                                        # see pdf report for reasoning
 
             e = Environment()           # create environment (also adds some dummy traffic)
             a = e.create_agent(LearningAgent,policy,alpha, gamma, no_plot=False)  # create agent
