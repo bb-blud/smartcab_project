@@ -4,18 +4,16 @@ from environment import Agent, Environment
 from planner import RoutePlanner
 from simulator import Simulator
 
-number_trials = 5
+number_trials = 100
 
 class LearningAgent(Agent):
     """An agent that learns to drive in the smartcab world."""
 
     def __init__(self, env, policy, alpha, gamma, no_plot):
-        super(LearningAgent, self).__init__(env)     # sets self.env = env, state = None, next_waypoint = None, and a default color
-        self.color = 'red'                           # override color
-        self.planner = RoutePlanner(self.env, self)  # simple route planner to get next_waypoint
+        super(LearningAgent, self).__init__(env)                   # sets self.env = env, state = None, next_waypoint = None, and a default color
+        self.color = 'red'                                         # override color
+        self.planner = RoutePlanner(self.env, self)                # simple route planner to get next_waypoint
         self.policy = policy
-
-        # #Initialize any additional variables here
 
         # State descriptors
         self.actions = self.env.valid_actions
@@ -26,7 +24,7 @@ class LearningAgent(Agent):
         self.trial = -1
         self.no_plot = no_plot   # activate plots or not
         self.bad_actions  = [0 for trial in range(number_trials)]  # bad actions performed in a given trial
-        self.out_of_times = [0 for trial in range(number_trials)]  # trials that agent run out of time
+        self.out_of_times = [0 for trial in range(number_trials)]  # trials that the agent ran out of time
 
         
         # For Q learning implementation
@@ -34,36 +32,42 @@ class LearningAgent(Agent):
         self.alpha = alpha
 
         self.Q = {
+                  (action, 'green', oncoming, waypoint) : 0 |
+                  for action   in self.actions              |
+                  for oncoming in self.actions              |
+                  for waypoint in self.actions[1:]            ## waypoint is only None when target is reached
+            }
 
-                  (action, light, oncoming, left, right, waypoint) : 0   \
-                  for action   in self.actions                           \
-                  for light    in self.lights                            \
-                  for oncoming in self.actions                           \
-                  for left     in self.actions                           \
-                  for right    in self.actions                           \
-                  for waypoint in self.actions[1:]                       # waypoint is only None when target is reached
-        }
+        red_Q =  {
+                  (action, 'red', left, waypoint) : 0 |
+                  for action   in self.actions        |
+                  for left     in self.actions        |
+                  for waypoint in self.actions[1:]
+            }
+
+        self.Q.update(red_Q)                                  ## combining the two main learning scenarios into dictionary Q
 
     def reset(self, destination=None):
         self.planner.route_to(destination)
-        # TODO: Prepare for a new trip; reset any variables here, if required
 
-
-        # Reset or increment tallying variables
+        # Reset previous state and increment tally
         self.prev_action_state = None
         self.prev_reward = 0
-        self.trial += 1                                            # update the trial count
+        self.trial += 1                                       ## update the trial count
 
     def update(self, t):
         # Gather inputs
-        self.next_waypoint = self.planner.next_waypoint()           ## from route planner, also displayed by simulator
+        self.next_waypoint = self.planner.next_waypoint()     ## from route planner, also displayed by simulator
         inputs = self.env.sense(self)
         deadline = self.env.get_deadline(self)
         wp = self.next_waypoint
         
         # # Update state
-        state = (inputs['light'], inputs['oncoming'], inputs['left'], inputs['right'], wp)
-        
+        if inputs['light'] == 'green':
+            state = (inputs['light'], inputs['oncoming'], wp)
+        else:
+            state = (inputs['light'], inputs[  'left'  ], wp)
+
         # # Select action according to policy
         Q_action = self.max_action(state)
 
@@ -71,7 +75,9 @@ class LearningAgent(Agent):
                    "random"        : random.choice(self.actions[1:]),
                    "reckless"      : wp,
                    "semi_reckless" : self.semi_reckless(Q_action, state),
-                   "Q_learning"    : Q_action } [self.policy]      ## Dictionary of different policies for comparison
+                   "Q_learning"    : Q_action } [self.policy]    ## Dictionary of different policies for comparison
+
+
 
         # # Execute action and get reward
         reward = self.env.act(self, action)
@@ -112,7 +118,7 @@ class LearningAgent(Agent):
         wp_value = self.Q[ (wp,) + state ]         ## This is how Q rates the way_point
 
         # Making a time weighted choice given current state
-        urgency = 1./(deadline + 0.001)
+        urgency = 1./(deadline + 1.)
         two_choices = {Q_action : Q_value * (1 - urgency), wp : wp_value * urgency }
 
         return max(two_choices, key=two_choices.get)
@@ -239,9 +245,9 @@ if __name__ == '__main__':
 
 # if __name__ == '__main__':
 
-#     runs = 100
+#     runs = 70
 #     jobs = []
-    
+
 #     for alp in alphas:                  #
 #         for gam in gammas:              #
 #             for k in range(runs):       # Faux Gridsearch
@@ -252,22 +258,24 @@ if __name__ == '__main__':
 #     for p in jobs:
 #         p.join()
 
-#     avg_2_target = { key : round(cumulative_ts[key]/runs, 2)  for key in cumulative_ts.keys() }
+#     avg_2_target = { key : cumulative_ts[key]/runs for key in cumulative_ts.keys() }
 #     minm = min(avg_2_target, key=avg_2_target.get)
+#     minm = round(minm[0], 4), round(minm[1], 4)
 
 #     ## Heat
 
 #     import matplotlib.pyplot as plt
 
 #     X, Y = np.meshgrid(alphas, gammas)
-#     Z = np.array([ [avg_2_target[x,y] for x in alphas] for y in gammas ])
+#     Z = np.array([ [np.log(avg_2_target[x,y]) for x in alphas] for y in gammas ])   ## At log scale;
+#                                                                                     ##difference between values was too small, maps were washed out
 
 #     print Z
 #     print minm
 #     plt.pcolor(X,Y,Z, cmap=plt.cm.Blues)
 #     plt.axis([X.min(), X.max(), Y.min(), Y.max()])
 #     plt.suptitle("Alpha-Gamma Heat Map", fontweight="bold")
-#     plt.title("Minimum at {}".format(minm))
+#     plt.title("{} runs of {} trials each min at {}".format(runs, number_trials,minm) )
 #     plt.xlabel("Alpha")
 #     plt.ylabel("Gamma")
 #     plt.colorbar()
