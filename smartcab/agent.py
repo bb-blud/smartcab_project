@@ -32,14 +32,14 @@ class LearningAgent(Agent):
         self.alpha = alpha
 
         self.Q = {
-                  (action, 'green', oncoming, waypoint) : 0 \
+                  (action, 'green', oncoming, waypoint) : 1 \
                   for action   in self.actions              \
                   for oncoming in self.actions              \
                   for waypoint in self.actions[1:]            ## waypoint is only None when target is reached
             }
 
         red_Q =  {
-                  (action, 'red', left, waypoint) : 0 \
+                  (action, 'red', left, waypoint) : 1 \
                   for action   in self.actions        \
                   for left     in self.actions        \
                   for waypoint in self.actions[1:]
